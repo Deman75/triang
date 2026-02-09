@@ -99,3 +99,156 @@ html, body {
   box-shadow: 0 10px 24px rgba(0,0,0,0.35);
   pointer-events: none;
 }
+
+#insetOverlay {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 12;
+  pointer-events: none;
+}
+.image-page {
+  overflow: hidden;
+}
+
+.image-page .panel {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  width: 360px;
+  max-height: calc(100% - 28px);
+  overflow: auto;
+  background: rgba(8, 12, 20, 0.78);
+  color: var(--text);
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+.image-page .title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.image-page .row {
+  margin-bottom: 12px;
+}
+
+.image-page .label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.image-page .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.image-page input[type="number"] {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.2);
+  color: var(--text);
+}
+
+.image-page input[type="range"] {
+  width: 100%;
+}
+
+.image-page .hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.image-page .btns {
+  display: flex;
+  gap: 8px;
+}
+
+.image-page button {
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.2);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.image-page .result {
+  font-size: 12px;
+  line-height: 1.4;
+  background: rgba(0,0,0,0.2);
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.image-page .back {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.image-page .canvas-wrap {
+  position: absolute;
+  left: 400px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-page #imgCanvas {
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  background: rgba(0,0,0,0.15);
+}
+
+.image-page .overlay {
+  position: absolute;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+#cursorCross {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0.8;
+}
+#cursorCross .h,
+#cursorCross .v {
+  position: absolute;
+  background: var(--cross-color, rgba(53, 224, 161, 0.95));
+  box-shadow: 0 0 6px rgba(0,0,0,0.4);
+}
+#cursorCross .label {
+  position: absolute;
+  left: 52px;
+  top: -6px;
+  font-size: 12px;
+  color: var(--cross-color, rgba(53, 224, 161, 0.95));
+  text-shadow: 0 0 6px rgba(0,0,0,0.6);
+}
+#cursorCross .h {
+  left: 0;
+  top: 23px;
+  width: 48px;
+  height: 2px;
+}
+#cursorCross .v {
+  left: 23px;
+  top: 0;
+  width: 2px;
+  height: 48px;
+}

@@ -92,6 +92,8 @@ const state = {
   moveMode: "GROUND",     // GROUND or HEIGHT
   noiseMeters: 0.0,
   smoothWindow: 12,
+  pixelNoise: 1.5,
+  showPixelOverlay: true,
   snapGroundY: true,
   snapAerialMinY: true,
   detach: () => { tctrl.detach(); selected = null; }
@@ -101,6 +103,8 @@ const gui = new GUI({ title: "Параметры" });
 const moveCtrl = gui.add(state, "moveMode", ["GROUND", "HEIGHT"]).name("Режим перемещения");
 gui.add(state, "noiseMeters", 0, 5, 0.01).name("Шум дистанции (м)");
 gui.add(state, "smoothWindow", 1, 40, 1).name("Сглаживание (окон)");
+gui.add(state, "pixelNoise", 0, 10, 0.1).name("Шум пикселей (px)");
+gui.add(state, "showPixelOverlay").name("Пиксели в окне");
 gui.add(state, "snapGroundY").name("Маяки на земле");
 gui.add(state, "snapAerialMinY").name("A выше земли");
 gui.add(state, "detach").name("Снять выбор");
@@ -159,11 +163,16 @@ const elFz   = document.getElementById("f_z");
 const elFp   = document.getElementById("f_p");
 const elInsetFrame = document.getElementById("insetFrame");
 const elInsetLabel = document.getElementById("insetLabel");
+const elInsetOverlay = document.getElementById("insetOverlay");
+const elFa12 = document.getElementById("f_a12");
+const elFa13 = document.getElementById("f_a13");
+const elFa23 = document.getElementById("f_a23");
 
 const fmt = (v) => `(${v.x.toFixed(2)}, ${v.y.toFixed(2)}, ${v.z.toFixed(2)})`;
 const dist = (a,b) => a.clone().sub(b).length();
 const fmt1 = (n) => Number.isFinite(n) ? n.toFixed(3) : "—";
 const fmt3 = (v) => `(${fmt1(v.x)}, ${fmt1(v.y)}, ${fmt1(v.z)})`;
+const fmtDeg = (r) => Number.isFinite(r) ? `${(r * 180 / Math.PI).toFixed(2)}°` : "—";
 
 // Simple moving average buffers
 const smooth = {
@@ -187,6 +196,55 @@ function pushAndAverageVec3(buf, v, maxLen) {
   const out = new THREE.Vector3();
   for (let i = 0; i < buf.length; i++) out.add(buf[i]);
   return out.divideScalar(buf.length || 1);
+}
+
+function addPixelNoise(value, sigma) {
+  if (sigma <= 0) return value;
+  const u1 = Math.max(Math.random(), 1e-9);
+  const u2 = Math.max(Math.random(), 1e-9);
+  const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  return value + z0 * sigma;
+}
+
+function projectToInset(cam, point, size) {
+  const v = point.clone().project(cam);
+  if (v.z < -1 || v.z > 1) return null;
+  const x = (v.x * 0.5 + 0.5) * size;
+  const y = (1 - (v.y * 0.5 + 0.5)) * size;
+  if (x < 0 || x > size || y < 0 || y > size) return null;
+  return { x, y };
+}
+
+function pixelToWorldDir(cam, x, y, size) {
+  const nx = (x / size) * 2 - 1;
+  const ny = -((y / size) * 2 - 1);
+  const v = new THREE.Vector3(nx, ny, 0.5).unproject(cam);
+  return v.sub(cam.position).normalize();
+}
+
+function estimateFromBearings(points, dirs) {
+  if (points.length < 2) return { ok:false, msg:"Недостаточно наблюдений." };
+  const A = new THREE.Matrix3().set(
+    0,0,0,
+    0,0,0,
+    0,0,0
+  );
+  const b = new THREE.Vector3(0,0,0);
+  for (let i = 0; i < points.length; i++) {
+    const d = dirs[i];
+    const m = new THREE.Matrix3().set(
+      1 - d.x*d.x, -d.x*d.y,   -d.x*d.z,
+      -d.y*d.x,    1 - d.y*d.y, -d.y*d.z,
+      -d.z*d.x,    -d.z*d.y,   1 - d.z*d.z
+    );
+    A.elements = A.elements.map((v, idx) => v + m.elements[idx]);
+    const mp = points[i].clone().applyMatrix3(m);
+    b.add(mp);
+  }
+  const inv = A.clone();
+  if (!inv.invert()) return { ok:false, msg:"Матрица вырождена." };
+  const C = b.clone().applyMatrix3(inv);
+  return { ok:true, p: C };
 }
 
 function animate() {
@@ -234,35 +292,7 @@ function animate() {
   elTrue.textContent = fmt(A.position);
   elRan.textContent  = `r1=${r1.toFixed(2)} м, r2=${r2.toFixed(2)} м, r3=${r3.toFixed(2)} м`;
 
-  if (res.ok) {
-    const pSmooth = pushAndAverageVec3(smooth.pos, res.p, win);
-    elEst.textContent = fmt(pSmooth);
-    elErr.textContent = `${pSmooth.clone().sub(A.position).length().toFixed(2)} м`;
-
-    const fr = localFrame(THREE, P1.position, P2.position, P3.position);
-    if (fr.ok) {
-      const lp = toLocalXYZ(fr, pSmooth);
-      elLoc.textContent = `x=${lp.x.toFixed(2)} м, y=${lp.y.toFixed(2)} м, z=${lp.z.toFixed(2)} м`;
-    } else {
-      elLoc.textContent = `— (${fr.msg})`;
-    }
-
-    elFp.textContent = fmt(pSmooth);
-  } else {
-    elEst.textContent = `— (${res.msg})`;
-    elErr.textContent = "—";
-    elLoc.textContent = "—";
-    elFp.textContent = "—";
-  }
-
-  // update cached positions for axis locking
-  draggable.forEach(obj => prev.set(obj, obj.position.clone()));
-
-  renderer.setScissorTest(false);
-  renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-  renderer.render(scene, camera);
-
-  // Inset view from point A
+  // Inset geometry + noisy pixel observations
   const insetSize = Math.min(240, Math.floor(window.innerWidth * 0.28));
   const pad = 18;
   const lift = 120;
@@ -279,7 +309,97 @@ function animate() {
     elInsetLabel.style.left = `${x}px`;
     elInsetLabel.style.bottom = `${y + insetSize + 8}px`;
   }
+  if (elInsetOverlay) {
+    elInsetOverlay.style.left = `${x}px`;
+    elInsetOverlay.style.bottom = `${y}px`;
+    elInsetOverlay.style.width = `${insetSize}px`;
+    elInsetOverlay.style.height = `${insetSize}px`;
+    elInsetOverlay.width = insetSize;
+    elInsetOverlay.height = insetSize;
+  }
 
+  const beaconCenter = P1.position.clone().add(P2.position).add(P3.position).multiplyScalar(1 / 3);
+  droneCam.position.copy(A.position);
+  droneCam.lookAt(beaconCenter);
+  droneCam.up.set(0, 1, 0);
+  droneCam.aspect = 1;
+  droneCam.updateProjectionMatrix();
+
+  const pixelObs = {
+    p1: null,
+    p2: null,
+    p3: null
+  };
+
+  const proj1 = projectToInset(droneCam, P1.position, insetSize);
+  const proj2 = projectToInset(droneCam, P2.position, insetSize);
+  const proj3 = projectToInset(droneCam, P3.position, insetSize);
+
+  if (proj1) pixelObs.p1 = { x: addPixelNoise(proj1.x, state.pixelNoise), y: addPixelNoise(proj1.y, state.pixelNoise) };
+  if (proj2) pixelObs.p2 = { x: addPixelNoise(proj2.x, state.pixelNoise), y: addPixelNoise(proj2.y, state.pixelNoise) };
+  if (proj3) pixelObs.p3 = { x: addPixelNoise(proj3.x, state.pixelNoise), y: addPixelNoise(proj3.y, state.pixelNoise) };
+
+  // Angles between rays from A (from noisy pixels)
+  if (pixelObs.p1 && pixelObs.p2 && pixelObs.p3) {
+    const d1 = pixelToWorldDir(droneCam, pixelObs.p1.x, pixelObs.p1.y, insetSize);
+    const d2 = pixelToWorldDir(droneCam, pixelObs.p2.x, pixelObs.p2.y, insetSize);
+    const d3 = pixelToWorldDir(droneCam, pixelObs.p3.x, pixelObs.p3.y, insetSize);
+    const a12 = Math.acos(THREE.MathUtils.clamp(d1.dot(d2), -1, 1));
+    const a13 = Math.acos(THREE.MathUtils.clamp(d1.dot(d3), -1, 1));
+    const a23 = Math.acos(THREE.MathUtils.clamp(d2.dot(d3), -1, 1));
+    if (elFa12) elFa12.textContent = fmtDeg(a12);
+    if (elFa13) elFa13.textContent = fmtDeg(a13);
+    if (elFa23) elFa23.textContent = fmtDeg(a23);
+  } else {
+    if (elFa12) elFa12.textContent = "—";
+    if (elFa13) elFa13.textContent = "—";
+    if (elFa23) elFa23.textContent = "—";
+  }
+
+  // Estimate A from noisy pixel bearings
+  let pixelEst = null;
+  if (pixelObs.p1 && pixelObs.p2 && pixelObs.p3) {
+    const d1 = pixelToWorldDir(droneCam, pixelObs.p1.x, pixelObs.p1.y, insetSize);
+    const d2 = pixelToWorldDir(droneCam, pixelObs.p2.x, pixelObs.p2.y, insetSize);
+    const d3 = pixelToWorldDir(droneCam, pixelObs.p3.x, pixelObs.p3.y, insetSize);
+    const est = estimateFromBearings(
+      [P1.position, P2.position, P3.position],
+      [d1, d2, d3]
+    );
+    if (est.ok) {
+      pixelEst = est.p;
+    }
+  }
+
+  if (pixelEst) {
+    const pSmooth = pushAndAverageVec3(smooth.pos, pixelEst, win);
+    elEst.textContent = fmt(pSmooth);
+    elErr.textContent = `${pSmooth.clone().sub(A.position).length().toFixed(2)} м`;
+
+    const fr = localFrame(THREE, P1.position, P2.position, P3.position);
+    if (fr.ok) {
+      const lp = toLocalXYZ(fr, pSmooth);
+      elLoc.textContent = `x=${lp.x.toFixed(2)} м, y=${lp.y.toFixed(2)} м, z=${lp.z.toFixed(2)} м`;
+    } else {
+      elLoc.textContent = `— (${fr.msg})`;
+    }
+
+    elFp.textContent = fmt(pSmooth);
+  } else {
+    elEst.textContent = "— (нет пиксельных наблюдений)";
+    elErr.textContent = "—";
+    elLoc.textContent = "—";
+    elFp.textContent = "—";
+  }
+
+  // update cached positions for axis locking
+  draggable.forEach(obj => prev.set(obj, obj.position.clone()));
+
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+  renderer.render(scene, camera);
+
+  // Inset view from point A
   const prevAVisible = A.visible;
   const prevAxesVisible = axes.visible;
   const prevCtrlVisible = tctrl.visible;
@@ -287,12 +407,24 @@ function animate() {
   axes.visible = false;
   tctrl.visible = false;
 
-  droneCam.position.copy(A.position);
-  const groundCenter = P1.position.clone().add(P2.position).add(P3.position).multiplyScalar(1 / 3);
-  droneCam.lookAt(groundCenter);
-  droneCam.up.set(0, 1, 0);
-  droneCam.aspect = 1;
-  droneCam.updateProjectionMatrix();
+  if (elInsetOverlay) {
+    const ctx = elInsetOverlay.getContext("2d");
+    ctx.clearRect(0, 0, insetSize, insetSize);
+    if (state.showPixelOverlay) {
+      const points = [
+        { p: pixelObs.p1, c: "#ffcc00" },
+        { p: pixelObs.p2, c: "#00d1ff" },
+        { p: pixelObs.p3, c: "#ff4d7d" }
+      ];
+      for (const item of points) {
+        if (!item.p) continue;
+        ctx.beginPath();
+        ctx.fillStyle = item.c;
+        ctx.arc(item.p.x, item.p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
 
   renderer.clearDepth();
   renderer.setScissorTest(true);

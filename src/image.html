@@ -1,0 +1,116 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Оценка расстояния по фото</title>
+  <link rel="stylesheet" href="../styles/styles.css" />
+</head>
+<body class="image-page">
+  <div class="panel">
+    <div class="title">Расстояние по фото (3 маркера)</div>
+    <div class="row">
+      <label class="label">Изображение</label>
+      <input id="fileInput" type="file" accept="image/*" />
+    </div>
+    <div class="row">
+      <label class="label">Дистанции между маркерами (м)</label>
+      <div class="grid">
+        <label>P1–P2 <input id="d12" type="number" step="0.01" value="20" /></label>
+        <label>P1–P3 <input id="d13" type="number" step="0.01" value="53.85" /></label>
+        <label>P2–P3 <input id="d23" type="number" step="0.01" value="50" /></label>
+      </div>
+    </div>
+    <div class="row">
+      <label class="label">Калибровка (фокус, px)</label>
+      <input id="focal" type="range" min="200" max="3000" step="10" value="2140" />
+      <div class="hint">f = <span id="focalVal">2140</span> px</div>
+    </div>
+    <div class="row">
+      <label class="label">Авто-подбор</label>
+      <div class="btns">
+        <button id="autoSolve">Авто: точки + фокус</button>
+      </div>
+      <label style="display:block; margin-top:6px;">
+        <input id="angleOnly" type="checkbox" checked /> Использовать только углы (без положения в кадре)
+      </label>
+      <label style="display:block; margin-top:6px;">
+        <input id="p1Centered" type="checkbox" /> Считать, что P1 в центре кадра (только расстояния)
+      </label>
+      <div class="hint">Ищет лучшую перестановку P1/P2/P3 и фокус, учитывая неточный клик.</div>
+    </div>
+    <div class="row">
+      <label class="label">Подсказка позиции (относительно P1)</label>
+      <div class="grid">
+        <label>ΔX <input id="hintX" type="number" step="1" value="-10" /></label>
+        <label>ΔY <input id="hintY" type="number" step="1" value="-200" /></label>
+        <label>ΔZ <input id="hintZ" type="number" step="1" value="100" /></label>
+      </div>
+      <div class="hint">Пример: 10 м левее, 200 м позади, 100 м выше = (-10, -200, 100)</div>
+    </div>
+    <div class="row">
+      <label class="label">Фантомные точки</label>
+      <label><input id="showPhantom" type="checkbox" checked /> Показать ожидаемые точки</label>
+      <div class="hint">Рисуются по текущей подсказке позиции и фокусу.</div>
+      <div class="grid" style="margin-top:6px;">
+        <label>φ° <input id="phantomRot" type="number" step="1" value="0" /></label>
+        <label>ΔX (px) <input id="phantomDX" type="number" step="1" value="0" /></label>
+        <label>ΔY (px) <input id="phantomDY" type="number" step="1" value="0" /></label>
+      </div>
+      <label style="display:block; margin-top:6px;">
+        <input id="lockP1" type="checkbox" checked /> Зафиксировать фантомный P1 на клике
+      </label>
+      <div class="hint">Поворот φ — в кадре вокруг P1 (желтой). Смещения ΔX/ΔY — в пикселях.</div>
+    </div>
+    <div class="row">
+      <label class="label">Экв. фокус (мм)</label>
+      <div class="grid">
+        <label>f_eq <input id="focalEq" type="number" step="0.1" value="36" /></label>
+        <label>сенсор W <input id="sensorW" type="number" step="0.1" value="36" /></label>
+        <label>px = <span id="focalEqPx">—</span></label>
+      </div>
+      <div class="btns">
+        <button id="applyFocalEq">Применить к ползунку</button>
+      </div>
+      <div class="hint">f(px) = f_mm / sensorW_mm * imageWidth_px</div>
+    </div>
+    <div class="row">
+      <label class="label">Шум клика (px)</label>
+      <input id="clickNoise" type="range" min="0" max="5" step="0.1" value="0" />
+      <div class="hint">σ = <span id="clickNoiseVal">0</span> px</div>
+    </div>
+    <div class="row">
+      <label class="label">Точки на фото</label>
+      <div class="hint">Кликни по центрам маркеров: P1 (желтый), P2 (голубой), P3 (розовый).</div>
+      <div class="hint">Зум: колесо. Панорама: ПКМ или Shift+drag.</div>
+      <div class="btns">
+        <button id="clearPoints">Сбросить точки</button>
+        <button id="solveBtn">Рассчитать</button>
+      </div>
+    </div>
+    <div class="row">
+      <label class="label">Результат</label>
+      <div class="result" id="result">—</div>
+    </div>
+    <div class="row">
+      <label class="label">Ошибка проекции</label>
+      <div class="result" id="reproj">—</div>
+    </div>
+    <div class="row">
+      <a class="back" href="./index.html">← Назад к 3D сцене</a>
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="imgCanvas"></canvas>
+    <div class="overlay" id="overlayHint">Загрузи изображение и кликни по трем маркерам</div>
+    <div id="cursorCross">
+      <span class="h"></span>
+      <span class="v"></span>
+      <span class="label" id="cursorLabel">P1</span>
+    </div>
+  </div>
+
+  <script type="module" src="./image.js"></script>
+</body>
+</html>
