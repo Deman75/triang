@@ -1,0 +1,61 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D маяки + трилатерация</title>
+  <link rel="stylesheet" href="../styles/styles.css" />
+</head>
+<body>
+  <div id="hud">
+    <div><b>Истинная позиция A (мировая)</b>: <code id="truePos"></code></div>
+    <div><b>Восстановленная по 3 расстояниям</b>: <code id="estPos"></code></div>
+    <div><b>Ошибка</b>: <code id="errPos"></code></div>
+    <div class="section"><b>Дистанции</b>: <code id="ranges"></code></div>
+    <div class="section">
+      <b>Локальные координаты в системе маяков</b>
+      <span class="small">(X: P1→P2, Y к P3, Z вверх)</span><br>
+      <code id="localPos"></code>
+    </div>
+    <div class="section small">
+      Трилатерация даёт 2 решения (над/под плоскостью). Мы выбираем решение с <code>y ≥ 0</code>.
+    </div>
+    <div class="section small">
+      <b>Модель:</b> известны координаты маяков и измеренные расстояния до A.
+      Если у вас только камера, то это задача PnP по угловым наблюдениям: нужна калибровка камеры и минимум 3 неколлинеарные точки.
+    </div>
+  </div>
+
+  <div id="hint">
+    <b>Камера:</b> ЛКМ вращать, колесо зум, ПКМ панорамировать.<br>
+    <b>Точки:</b> клик по точке → появится манипулятор. Маяки двигаются по земле (режим <code>GROUND</code>) или по высоте (<code>HEIGHT</code>). Точка A двигается свободно по X/Y/Z.
+    <span class="warn">Маяки удерживаются на земле (y=0), A — выше земли.</span>
+  </div>
+
+  <div id="insetLabel">Вид с точки A</div>
+  <div id="insetFrame"></div>
+  <div id="formulaBox">
+    <div><b>Трилатерация (с подстановкой значений):</b></div>
+    <div>d = ‖P2 − P1‖ = <code id="f_d"></code></div>
+    <div>ex = (P2 − P1) / d = <code id="f_ex"></code></div>
+    <div>i = ex · (P3 − P1) = <code id="f_i"></code></div>
+    <div>j = ey · (P3 − P1) = <code id="f_j"></code></div>
+    <div>x = (r1² − r2² + d²) / (2d) = <code id="f_x"></code></div>
+    <div>y = (r1² − r3² + i² + j² − 2ix) / (2j) = <code id="f_y"></code></div>
+    <div>z = √(r1² − x² − y²) = <code id="f_z"></code></div>
+    <div>P = P1 + x·ex + y·ey + z·(ex × ey) = <code id="f_p"></code></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+        "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.19.2/dist/lil-gui.esm.min.js"
+      }
+    }
+  </script>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+﻿:root {
+  --bg1: #0b1220;
+  --bg2: #0e1c2a;
+  --panel: rgba(8, 12, 20, 0.72);
+  --text: #e6f0ff;
+  --muted: #b6c4de;
+  --accent: #35e0a1;
+  --warn: #ffb86b;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap');
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+  background: radial-gradient(1200px 600px at 20% 10%, #162740 0%, transparent 60%),
+              radial-gradient(900px 500px at 80% 20%, #0f2a3a 0%, transparent 55%),
+              linear-gradient(160deg, var(--bg1), var(--bg2));
+}
+
+#hud {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 10;
+  background: var(--panel);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 12px;
+  max-width: 640px;
+  line-height: 1.35;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(8px);
+}
+
+#hud code { color: var(--accent); }
+
+#hint {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 10;
+  background: rgba(8, 12, 20, 0.58);
+  color: var(--muted);
+  padding: 10px 12px;
+  border-radius: 12px;
+  max-width: 680px;
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.small { font-size: 12px; color: var(--muted); }
+.section { margin-top: 6px; }
+.warn { color: var(--warn); }
+
+#formulaBox {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 10;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text);
+  background: rgba(8, 12, 20, 0.65);
+  border: 1px solid rgba(255,255,255,0.08);
+  max-width: 360px;
+  pointer-events: none;
+}
+#insetLabel {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 11;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text);
+  background: rgba(8, 12, 20, 0.65);
+  border: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.2px;
+  pointer-events: none;
+}
+
+#insetFrame {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  width: 240px;
+  height: 240px;
+  z-index: 9;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+  pointer-events: none;
+}
