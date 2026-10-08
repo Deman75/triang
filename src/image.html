@@ -12,6 +12,7 @@
     <div class="row">
       <label class="label">Изображение</label>
       <input id="fileInput" type="file" accept="image/*" />
+      <div id="imageInfo" class="hint"></div>
     </div>
     <div class="row">
       <label class="label">Дистанции между маркерами (м)</label>
@@ -23,35 +24,38 @@
     </div>
     <div class="row">
       <label class="label">Калибровка (фокус, px)</label>
-      <input id="focal" type="range" min="200" max="3000" step="10" value="2140" />
-      <div class="hint">f = <span id="focalVal">2140</span> px</div>
+      <input id="focal" type="number" min="1" step="0.1" value="2140" />
+      <div class="hint">Фокус в пикселях исходного изображения. Оптический центр — центр кадра; изображение без дисторсии.</div>
+      <div class="btns"><a class="back" href="./calibration.html">Калибровка по известным XYZ →</a></div>
+      <button id="applySavedCalibration">Применить сохранённую</button>
+      <div id="calibrationStatus" class="hint"></div>
     </div>
     <div class="row">
-      <label class="label">Авто-подбор</label>
-      <div class="btns">
-        <button id="autoSolve">Авто: точки + фокус</button>
-      </div>
-      <label style="display:block; margin-top:6px;">
-        <input id="angleOnly" type="checkbox" checked /> Использовать только углы (без положения в кадре)
-      </label>
-      <label style="display:block; margin-top:6px;">
-        <input id="p1Centered" type="checkbox" /> Считать, что P1 в центре кадра (только расстояния)
-      </label>
-      <div class="hint">Ищет лучшую перестановку P1/P2/P3 и фокус, учитывая неточный клик.</div>
-    </div>
-    <div class="row">
-      <label class="label">Подсказка позиции (относительно P1)</label>
+      <label class="label">Высота над плоскостью маяков</label>
       <div class="grid">
-        <label>ΔX <input id="hintX" type="number" step="1" value="-10" /></label>
-        <label>ΔY <input id="hintY" type="number" step="1" value="-200" /></label>
-        <label>ΔZ <input id="hintZ" type="number" step="1" value="100" /></label>
+        <label>Высота, м <input id="height" type="number" min="0.1" step="0.1" value="50" /></label>
+        <label>Погрешность ±м <input id="heightTolerance" type="number" min="0" step="0.1" value="2" /></label>
       </div>
-      <div class="hint">Пример: 10 м левее, 200 м позади, 100 м выше = (-10, -200, 100)</div>
+      <div class="hint">Углы камеры неизвестны. Высота отбирает подходящие решения, но не заменяет измерения по фото.</div>
+    </div>
+    <div class="row">
+      <label class="label">Позиция для фантомов и тестового кадра</label>
+      <div class="grid">
+        <label>X <input id="hintX" type="number" step="1" value="0" /></label>
+        <label>Y <input id="hintY" type="number" step="1" value="-200" /></label>
+        <label>Z <input id="hintZ" type="number" min="0.1" step="1" value="50" /></label>
+      </div>
+      <div class="hint">P1 = (0, 0, 0). +X: от P1 к P2. +Y: перпендикулярно X по земле в сторону P3. +Z: вверх. Эта позиция не используется при расчёте по фото.</div>
+      <div class="hint">Вид перед маяками: голубой слева, розовый за жёлтым. X = 0, Y = −200, Z = 50 — камера в 200 м перед жёлтым на высоте 50 м.</div>
+      <button id="demoBtn">Создать тестовый кадр</button>
+    </div>
+    <div class="row">
+      <div class="hint">Жёлтый маяк должен быть в центре исходного кадра. Для расчёта используются реальные координаты всех трёх кликов; программное смещение картинки не меняет калибровку.</div>
     </div>
     <div class="row">
       <label class="label">Фантомные точки</label>
       <label><input id="showPhantom" type="checkbox" checked /> Показать ожидаемые точки</label>
-      <div class="hint">Рисуются по текущей подсказке позиции и фокусу.</div>
+      <div class="hint">Камера смотрит на P1. Фантомы — только визуальная проверка, их смещения не влияют на расчёт.</div>
       <div class="grid" style="margin-top:6px;">
         <label>φ° <input id="phantomRot" type="number" step="1" value="0" /></label>
         <label>ΔX (px) <input id="phantomDX" type="number" step="1" value="0" /></label>
@@ -63,16 +67,16 @@
       <div class="hint">Поворот φ — в кадре вокруг P1 (желтой). Смещения ΔX/ΔY — в пикселях.</div>
     </div>
     <div class="row">
-      <label class="label">Экв. фокус (мм)</label>
+      <label class="label">Перевод фокуса из мм</label>
       <div class="grid">
-        <label>f_eq <input id="focalEq" type="number" step="0.1" value="36" /></label>
+        <label>Фокус, мм <input id="focalEq" type="number" step="0.1" value="36" /></label>
         <label>сенсор W <input id="sensorW" type="number" step="0.1" value="36" /></label>
         <label>px = <span id="focalEqPx">—</span></label>
       </div>
       <div class="btns">
-        <button id="applyFocalEq">Применить к ползунку</button>
+        <button id="applyFocalEq">Применить</button>
       </div>
-      <div class="hint">f(px) = f_mm / sensorW_mm * imageWidth_px</div>
+      <div class="hint">f(px) = f(мм) / ширина сенсора(мм) × ширина кадра(px). Для эквивалентного фокуса используйте эквивалентную ширину сенсора.</div>
     </div>
     <div class="row">
       <label class="label">Шум клика (px)</label>
@@ -81,8 +85,11 @@
     </div>
     <div class="row">
       <label class="label">Точки на фото</label>
-      <div class="hint">Кликни по центрам маркеров: P1 (желтый), P2 (голубой), P3 (розовый).</div>
+      <button id="findMarkers">Найти маяки автоматически</button>
+      <div id="detectionStatus" class="hint" aria-live="polite"></div>
+      <div class="hint">Автопоиск: жёлтый P1, синий P2, розово-фиолетовый P3 на сером фоне. Или кликни по центрам маркеров вручную.</div>
       <div class="hint">Зум: колесо. Панорама: ПКМ или Shift+drag.</div>
+      <div class="hint">Alt + колесо — размер кольца прицела. Совместите его с краем круглого маяка; пустой центр не закрывает точку выбора.</div>
       <div class="btns">
         <button id="clearPoints">Сбросить точки</button>
         <button id="solveBtn">Рассчитать</button>
@@ -93,7 +100,7 @@
       <div class="result" id="result">—</div>
     </div>
     <div class="row">
-      <label class="label">Ошибка проекции</label>
+      <label class="label">Проверка исходных данных</label>
       <div class="result" id="reproj">—</div>
     </div>
     <div class="row">
