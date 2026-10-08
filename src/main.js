@@ -4,16 +4,18 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import GUI from "lil-gui";
 
 import { addNoise, trilaterate3, localFrame, toLocalXYZ } from "./math.js";
+import { sceneLayout } from "./scene-layout.js";
 
+const sceneViewport = document.getElementById("sceneViewport");
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(sceneViewport.clientWidth, sceneViewport.clientHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-document.body.appendChild(renderer.domElement);
+sceneViewport.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b1220);
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+const camera = new THREE.PerspectiveCamera(60, sceneViewport.clientWidth / sceneViewport.clientHeight, 0.1, 5000);
 
 const droneCam = new THREE.PerspectiveCamera(60, 1, 0.1, 5000);
 
@@ -74,7 +76,7 @@ let selected = null;
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-window.addEventListener("pointerdown", (ev) => {
+renderer.domElement.addEventListener("pointerdown", (ev) => {
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
   mouse.y = -(((ev.clientY - rect.top) / rect.height) * 2 - 1);
@@ -100,6 +102,7 @@ const state = {
 };
 
 const gui = new GUI({ title: "Параметры" });
+document.getElementById("sceneSettings").appendChild(gui.domElement);
 const moveCtrl = gui.add(state, "moveMode", ["GROUND", "HEIGHT"]).name("Режим перемещения");
 gui.add(state, "noiseMeters", 0, 5, 0.01).name("Шум дистанции (м)");
 gui.add(state, "smoothWindow", 1, 40, 1).name("Сглаживание (окон)");
@@ -293,29 +296,11 @@ function animate() {
   elRan.textContent  = `r1=${r1.toFixed(2)} м, r2=${r2.toFixed(2)} м, r3=${r3.toFixed(2)} м`;
 
   // Inset geometry + noisy pixel observations
-  const insetSize = Math.min(240, Math.floor(window.innerWidth * 0.28));
-  const pad = 18;
-  const lift = 120;
-  const x = pad;
-  const y = pad + lift;
-
-  if (elInsetFrame) {
-    elInsetFrame.style.left = `${x}px`;
-    elInsetFrame.style.bottom = `${y}px`;
-    elInsetFrame.style.width = `${insetSize}px`;
-    elInsetFrame.style.height = `${insetSize}px`;
-  }
-  if (elInsetLabel) {
-    elInsetLabel.style.left = `${x}px`;
-    elInsetLabel.style.bottom = `${y + insetSize + 8}px`;
-  }
+  const layout = sceneLayout(sceneViewport.getBoundingClientRect(),elInsetFrame.getBoundingClientRect());
+  const {size:insetSize,x,y,width,height} = layout;
   if (elInsetOverlay) {
-    elInsetOverlay.style.left = `${x}px`;
-    elInsetOverlay.style.bottom = `${y}px`;
-    elInsetOverlay.style.width = `${insetSize}px`;
-    elInsetOverlay.style.height = `${insetSize}px`;
-    elInsetOverlay.width = insetSize;
-    elInsetOverlay.height = insetSize;
+    if (elInsetOverlay.width !== insetSize) elInsetOverlay.width = insetSize;
+    if (elInsetOverlay.height !== insetSize) elInsetOverlay.height = insetSize;
   }
 
   const beaconCenter = P1.position.clone().add(P2.position).add(P3.position).multiplyScalar(1 / 3);
@@ -396,7 +381,7 @@ function animate() {
   draggable.forEach(obj => prev.set(obj, obj.position.clone()));
 
   renderer.setScissorTest(false);
-  renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+  renderer.setViewport(0, 0, width, height);
   renderer.render(scene, camera);
 
   // Inset view from point A
@@ -432,7 +417,7 @@ function animate() {
   renderer.setScissor(x, y, insetSize, insetSize);
   renderer.render(scene, droneCam);
   renderer.setScissorTest(false);
-  renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+  renderer.setViewport(0, 0, width, height);
 
   A.visible = prevAVisible;
   axes.visible = prevAxesVisible;
@@ -440,8 +425,11 @@ function animate() {
 }
 animate();
 
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+function resizeScene() {
+  const width=Math.max(1,sceneViewport.clientWidth),height=Math.max(1,sceneViewport.clientHeight);
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  renderer.setSize(width,height);
+}
+window.addEventListener("resize", resizeScene);
+new ResizeObserver(resizeScene).observe(sceneViewport);

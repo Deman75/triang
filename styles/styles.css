@@ -364,3 +364,111 @@ html, body {
   .photo-workspace .panel { width: auto; padding: 18px; }
   .photo-workspace .canvas-wrap { left: auto; }
 }
+
+/* Keep simulation panels outside the interactive rendering area. */
+.simulation-page {
+  display: grid;
+  grid-template-columns: 310px minmax(0,1fr);
+  grid-template-rows: auto minmax(0,1fr);
+}
+.simulation-header {
+  grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center;
+  gap: 20px; padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(8,12,20,0.8);
+}
+.simulation-header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+.simulation-header p { margin: 5px 0 0; font-size: 12px; color: var(--muted); }
+.simulation-header nav { display: flex; gap: 20px; align-items: center; }
+.simulation-calibration { color: var(--muted); font-size: 12px; text-decoration: none; }
+.photo-cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 18px;
+  padding: 13px 18px; border-radius: 9px; background: var(--accent); color: #08271d;
+  font-size: 14px; font-weight: 600; text-decoration: none;
+}
+.photo-cta:hover { background: #6eebbd; }
+.simulation-page :is(a,summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.simulation-sidebar {
+  min-height: 0; overflow: auto; padding: 20px; box-sizing: border-box;
+  border-right: 1px solid rgba(255,255,255,0.08); background: rgba(8,12,20,0.78);
+  scrollbar-width: thin; scrollbar-color: #31445a transparent;
+}
+.simulation-page #hud {
+  position: static; padding: 0; max-width: none; border: 0; border-radius: 0;
+  background: none; box-shadow: none; backdrop-filter: none; line-height: 1.5;
+}
+.simulation-eyebrow { color: var(--accent); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+.simulation-sidebar h2 { margin: 6px 0 16px; font-size: 15px; font-weight: 600; }
+.simulation-page .metric { margin-bottom: 13px; }
+.simulation-page .metric > span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 5px; }
+.simulation-page .metric code { display: block; font-size: 12px; color: var(--text); overflow-wrap: anywhere; }
+.simulation-page .metric-error {
+  display: flex; justify-content: space-between; align-items: center; padding: 11px;
+  border-radius: 8px; background: rgba(53,224,161,0.07); border: 1px solid rgba(53,224,161,0.15);
+}
+.simulation-page .metric-error > span { margin: 0; }
+.simulation-page .metric-error code { color: var(--accent); }
+.simulation-details summary { color: var(--muted); cursor: pointer; font-size: 12px; padding: 10px 0; }
+.simulation-details summary:hover { color: var(--text); }
+.simulation-details .metric:first-of-type { margin-top: 10px; }
+.simulation-settings { margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); }
+.simulation-page .lil-gui.root {
+  position: static; width: 100%; max-width: none;
+  --background-color: transparent; --widget-color: #192b3c; --hover-color: #22384b;
+  --text-color: #e6f0ff; --title-background-color: #122233; --number-color: #35e0a1;
+  --font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-size: 12px; --widget-height: 24px; --name-width: 58%;
+}
+.simulation-about { margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); }
+.simulation-about p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.simulation-about .small { font-size: 11px; }
+.simulation-legend { display: flex; flex-wrap: wrap; gap: 15px; font-size: 11px; margin-top: 18px; }
+.simulation-legend span::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: currentColor; }
+.beacon-p1 { color: #ffcc00; }
+.beacon-p2 { color: #00d1ff; }
+.beacon-p3 { color: #ff4d7d; }
+.beacon-a { color: #88ff88; }
+#sceneViewport { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #0b1220; }
+#sceneViewport > canvas { display: block; position: absolute; inset: 0; z-index: 0; }
+.simulation-page #hint {
+  left: 18px; top: 16px; bottom: auto; max-width: min(360px,calc(100% - 64px));
+  padding: 0 12px; background: rgba(8,12,20,0.85);
+}
+.simulation-help p { font-size: 12px; line-height: 1.6; margin: 0 0 12px; }
+.observer-window {
+  position: absolute; left: 18px; bottom: 18px; width: min(220px,35%); aspect-ratio: 1;
+  z-index: 2; pointer-events: none;
+}
+.simulation-page #insetFrame {
+  inset: 0; width: auto; height: auto; border: 1px solid rgba(182,196,222,0.5);
+  border-radius: 0; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.simulation-page #insetOverlay { inset: 0; width: 100%; height: 100%; }
+.simulation-page #insetLabel {
+  left: 0; top: -32px; bottom: auto; padding: 6px 9px; border-radius: 6px; white-space: nowrap;
+}
+.simulation-page #insetLabel span { margin-left: 6px; color: var(--muted); font-size: 10px; }
+.simulation-page #formulaBox {
+  right: 18px; bottom: 18px; max-width: min(350px,calc(100% - 36px));
+  padding: 0 12px; pointer-events: auto; background: rgba(8,12,20,0.9);
+}
+.formula-content { max-height: 300px; overflow: auto; padding-bottom: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.formula-content code { color: var(--accent); }
+.formula-content .small { margin: 4px 0 12px; line-height: 1.5; }
+.formula-subheading { font-weight: 600; margin-top: 12px; }
+@media (max-width: 1100px) {
+  .simulation-page #formulaBox { top: 70px; bottom: auto; }
+  .formula-content { max-height: 180px; }
+}
+@media (max-width: 760px) {
+  body.simulation-page { overflow: auto; grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(420px,65vh) auto; }
+  .simulation-header { flex-direction: column; align-items: stretch; padding: 16px; gap: 14px; }
+  .simulation-header nav { flex-wrap: wrap; gap: 12px; }
+  .photo-cta { flex-grow: 1; font-size: 13px; padding: 12px; }
+  .simulation-header .simulation-calibration { order: 2; }
+  #sceneViewport { grid-row: 2; }
+  .simulation-sidebar { grid-row: 3; overflow: visible; border-right: 0; border-top: 1px solid rgba(255,255,255,0.08); }
+  .observer-window { width: min(180px,40%); }
+  .simulation-page #hint { left: 12px; top: 12px; }
+  .simulation-page #formulaBox { right: 12px; top: 64px; }
+  .simulation-page .formula-content { max-height: 120px; }
+}

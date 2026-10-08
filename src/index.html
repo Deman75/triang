@@ -3,56 +3,81 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D маяки + трилатерация</title>
+  <title>Триангуляция — 3D симуляция</title>
   <link rel="stylesheet" href="../styles/styles.css" />
 </head>
-<body>
-  <div id="hud">
-    <div><b>Истинная позиция A (мировая)</b>: <code id="truePos"></code></div>
-    <div><b>Восстановленная по пикселям</b>: <code id="estPos"></code></div>
-    <div><b>Ошибка</b>: <code id="errPos"></code></div>
-    <div class="section"><b>Дистанции</b>: <code id="ranges"></code></div>
-    <div class="section">
-      <b>Локальные координаты в системе маяков</b>
-      <span class="small">(X: P1→P2, Y к P3, Z вверх)</span><br>
-      <code id="localPos"></code>
+<body class="simulation-page">
+  <header class="simulation-header">
+    <div>
+      <h1>Триангуляция</h1>
+      <p>3D лаборатория · три маяка и камера</p>
     </div>
-    <div class="section small">
-      Трилатерация даёт 2 решения (над/под плоскостью). Мы выбираем решение с <code>y ≥ 0</code>.
-    </div>
-    <div class="section small">
-      <b>Модель:</b> известны координаты маяков и измеренные расстояния до A.
-      Если у вас только камера, то это задача PnP по угловым наблюдениям: нужна калибровка камеры и минимум 3 неколлинеарные точки.
-    </div>
-    <div class="section small">
-      <a href="./image.html" style="color:#35e0a1;">Открыть страницу: расстояние по фото</a>
-    </div>
-  </div>
+    <nav aria-label="Страницы проекта">
+      <a class="simulation-calibration" href="./calibration.html">Калибровка камеры</a>
+      <a class="photo-cta" href="./image.html">Рассчитать позицию по фото <span aria-hidden="true">→</span></a>
+    </nav>
+  </header>
 
-  <div id="hint">
-    <b>Камера:</b> ЛКМ вращать, колесо зум, ПКМ панорамировать.<br>
-    <b>Точки:</b> клик по точке → появится манипулятор. Маяки двигаются по земле (режим <code>GROUND</code>) или по высоте (<code>HEIGHT</code>). Точка A двигается свободно по X/Y/Z.
-    <span class="warn">Маяки удерживаются на земле (y=0), A — выше земли.</span>
-  </div>
+  <aside class="simulation-sidebar" aria-label="Показатели и настройки симуляции">
+    <section id="hud">
+      <div class="simulation-eyebrow">В реальном времени</div>
+      <h2>Позиция камеры A</h2>
+      <div class="metric"><span>Истинная · мировые XYZ, м</span><code id="truePos">—</code></div>
+      <div class="metric"><span>Оценка по пикселям · м</span><code id="estPos">—</code></div>
+      <div class="metric metric-error"><span>Ошибка оценки</span><code id="errPos">—</code></div>
+      <details class="simulation-details">
+        <summary>Расстояния и локальные координаты</summary>
+        <div class="metric"><span>До P1 / P2 / P3</span><code id="ranges">—</code></div>
+        <div class="metric"><span>В системе маяков</span><code id="localPos">—</code></div>
+        <p class="small">Здесь +X от P1 к P2, +Y по земле к P3, +Z вверх. Мировые оси сцены: Y — высота. На странице фото направление X обратное.</p>
+      </details>
+    </section>
+    <section class="simulation-settings">
+      <div id="sceneSettings"></div>
+    </section>
+    <section class="simulation-about">
+      <h2>Как попробовать</h2>
+      <p>Выберите точку в сцене и потяните за стрелку. Камера A перемещается по трём осям, маяки — по земле.</p>
+      <p class="small">Изменяйте шум пикселей и сглаживание, чтобы увидеть их влияние на оценку позиции.</p>
+      <div class="simulation-legend">
+        <span class="beacon-p1">P1</span><span class="beacon-p2">P2</span><span class="beacon-p3">P3</span><span class="beacon-a">Камера A</span>
+      </div>
+    </section>
+  </aside>
 
-  <div id="insetLabel">Вид с точки A</div>
-  <div id="insetFrame"></div>
-  <canvas id="insetOverlay"></canvas>
-  <div id="formulaBox">
-    <div><b>Трилатерация (с подстановкой значений):</b></div>
-    <div>d = ‖P2 − P1‖ = <code id="f_d"></code></div>
-    <div>ex = (P2 − P1) / d = <code id="f_ex"></code></div>
-    <div>i = ex · (P3 − P1) = <code id="f_i"></code></div>
-    <div>j = ey · (P3 − P1) = <code id="f_j"></code></div>
-    <div>x = (r1² − r2² + d²) / (2d) = <code id="f_x"></code></div>
-    <div>y = (r1² − r3² + i² + j² − 2ix) / (2j) = <code id="f_y"></code></div>
-    <div>z = √(r1² − x² − y²) = <code id="f_z"></code></div>
-    <div>P = P1 + x·ex + y·ey + z·(ex × ey) = <code id="f_p"></code></div>
-    <div style="margin-top:6px;"><b>Углы между лучами из A:</b></div>
-    <div>∠(AP1, AP2) = <code id="f_a12"></code></div>
-    <div>∠(AP1, AP3) = <code id="f_a13"></code></div>
-    <div>∠(AP2, AP3) = <code id="f_a23"></code></div>
-  </div>
+  <main id="sceneViewport" aria-label="Интерактивная 3D сцена">
+    <details id="hint" class="simulation-details">
+      <summary>Управление сценой</summary>
+      <div class="simulation-help">
+        <p>ЛКМ — вращение вида; колесо — приближение; ПКМ — перемещение вида.</p>
+        <p>Клик по точке — выбор. Стрелки манипулятора — перемещение по оси. «Снять выбор» — скрыть манипулятор.</p>
+        <p class="small">GROUND — движение маяков по земле; HEIGHT — по высоте, если отключено «Маяки на земле». Для A доступны все оси.</p>
+      </div>
+    </details>
+    <div class="observer-window">
+      <div id="insetLabel">Камера A <span>вид на маяки</span></div>
+      <div id="insetFrame"></div>
+      <canvas id="insetOverlay"></canvas>
+    </div>
+    <details id="formulaBox" class="simulation-details">
+      <summary>Формулы и углы лучей</summary>
+      <div class="formula-content">
+        <div class="small">Трилатерация по дистанциям — отдельная демонстрация; оценка позиции выше вычисляется по пиксельным лучам.</div>
+        <div>d = ‖P2 − P1‖ = <code id="f_d"></code></div>
+        <div>ex = (P2 − P1) / d = <code id="f_ex"></code></div>
+        <div>i = ex · (P3 − P1) = <code id="f_i"></code></div>
+        <div>j = ey · (P3 − P1) = <code id="f_j"></code></div>
+        <div>x = (r1² − r2² + d²) / (2d) = <code id="f_x"></code></div>
+        <div>y = (r1² − r3² + i² + j² − 2ix) / (2j) = <code id="f_y"></code></div>
+        <div>z = √(r1² − x² − y²) = <code id="f_z"></code></div>
+        <div>P = P1 + x·ex + y·ey + z·(ex × ey) = <code id="f_p"></code></div>
+        <div class="formula-subheading">Углы между лучами из A</div>
+        <div>∠(AP1, AP2) = <code id="f_a12"></code></div>
+        <div>∠(AP1, AP3) = <code id="f_a13"></code></div>
+        <div>∠(AP2, AP3) = <code id="f_a23"></code></div>
+      </div>
+    </details>
+  </main>
 
   <script type="importmap">
     {
@@ -63,7 +88,6 @@
       }
     }
   </script>
-
   <script type="module" src="./main.js"></script>
 </body>
 </html>
