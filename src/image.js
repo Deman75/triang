@@ -1,4 +1,4 @@
-import { buildTriangle, solvePosition, projectCentered } from "./geometry.js";
+import { buildTriangle, solvePosition, projectCentered, cameraToBeaconFrame, beaconToCameraFrame } from "./geometry.js";
 import { readCalibration, calibrationMatches } from "./calibration-profile.js";
 import { detectMarkers } from "./marker-detection.js";
 
@@ -8,11 +8,11 @@ const wrap = document.querySelector(".canvas-wrap");
 const colors = ["#ffcc00", "#4f8cff", "#d46bd5"];
 const state = {
   img: null, points: [], view: {scale: 1, offsetX: 0, offsetY: 0},
-  pan: null, dragged: false, autoAlignP1: true, focalSource: "manual"
+  pan: null, dragged: false, autoAlignP1: true, focalSource: "mm"
 };
 const value = id => Number(el(id).value);
 const worldTriangle = () => buildTriangle(value("d12"), value("d13"), value("d23"));
-const hintPosition = () => ({x:value("hintX"), y:value("hintY"), z:value("hintZ")});
+const hintPosition = () => cameraToBeaconFrame({x:value("hintX"), y:value("hintY"), z:value("hintZ")});
 const center = () => ({x:state.img.width/2, y:state.img.height/2});
 const screenToImage = (x,y) => ({
   x:(x-state.view.offsetX)/state.view.scale, y:(y-state.view.offsetY)/state.view.scale
@@ -104,6 +104,11 @@ el("fileInput").addEventListener("change", event => {
   img.src = url;
 });
 function renderPoints() {
+  el("findMarkers").disabled = !state.img;
+  el("solveBtn").disabled = !state.img || state.points.length !== 3;
+  el("markerProgress").textContent = state.points.length === 3
+    ? "Выбрано 3 из 3. Можно рассчитать позицию."
+    : `Выбрано ${state.points.length} из 3. ${state.img ? "Нажмите «Найти маяки» или выберите их вручную." : "Сначала загрузите фото."}`;
   if (!state.img) return;
   const {scale:s,offsetX:ox,offsetY:oy} = state.view;
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -209,14 +214,24 @@ el("clearPoints").addEventListener("click",() => {
   resetResult(); renderPoints();
 });
 function applyMillimeterFocal() {
-  if (!state.img || value("focalEq") <= 0 || value("sensorW") <= 0) return;
-  el("focal").value = (value("focalEq")/value("sensorW")*state.img.width).toFixed(3);
+  const mm=value("focalEq"), sensor=value("sensorW");
+  if (![mm,sensor].every(n => Number.isFinite(n) && n > 0)) {
+    el("calibrationStatus").textContent="Введите положительные фокус и ширину матрицы.";
+    return;
+  }
   state.focalSource="mm";
-  el("calibrationStatus").textContent=`Фокус из мм: ${el("focal").value} px для ширины ${state.img.width} px. При загрузке другого размера будет пересчитан.`;
+  if (!state.img) {
+    el("calibrationStatus").textContent="Фокус будет пересчитан в пиксели после загрузки фото.";
+    return;
+  }
+  el("focal").value = (mm/sensor*state.img.width).toFixed(3);
+  el("calibrationStatus").textContent=`Используется фокус из мм: ${el("focal").value} px. Размер кадра учитывается автоматически.`;
   resetResult(); renderPoints();
 }
 el("applyFocalEq").addEventListener("click",applyMillimeterFocal);
-["focalEq","sensorW"].forEach(id => el(id).addEventListener("input",updateFocalPreview));
+["focalEq","sensorW"].forEach(id => el(id).addEventListener("input",() => {
+  updateFocalPreview(); applyMillimeterFocal(); resetResult();
+}));
 ["d12","d13","d23","focal","height","heightTolerance"].forEach(id => el(id).addEventListener("input",() => {
   if(id==="focal")state.focalSource="manual";
   if (["d12","d13","d23","focal"].includes(id)) el("calibrationStatus").textContent = "Фокус или геометрия маяков изменены вручную.";
@@ -231,7 +246,13 @@ el("clickNoise").addEventListener("input",() => { el("clickNoiseVal").textConten
 
 function calculate() {
   try {
+    if (!el("height").value.trim() || !Number.isFinite(value("height")) || value("height") < 0.1) {
+      el("height").reportValidity?.();
+      throw new Error("Введите высоту над плоскостью маяков: не менее 0,1 м.");
+    }
     if (!state.img || state.points.length !== 3) throw new Error("Загрузите кадр и выберите P1, P2, P3.");
+    if (state.focalSource==="mm" && ![value("focalEq"),value("sensorW")].every(n => Number.isFinite(n) && n > 0))
+      throw new Error("Введите положительные фокус и ширину матрицы.");
     const result = solvePosition({
       world:worldTriangle(), pixels:state.points, focal:value("focal"), center:center(),
       height:value("height"), heightTolerance:value("heightTolerance")
@@ -248,8 +269,8 @@ function calculate() {
     }
     const format = n => (Math.abs(n) < 0.005 ? 0 : n).toFixed(2);
     const lines = result.accepted.map((candidate,i) => {
-      const p = candidate.position;
-      return `${result.accepted.length > 1 ? "Вариант "+(i+1)+": " : ""}Камера относительно P1: X=${format(p.x)}, Y=${format(p.y)}, Z=${format(p.z)} м. До P1/P2/P3: ${candidate.ranges.map(format).join(" / ")} м. Вектор к P1: (${format(-p.x)}, ${format(-p.y)}, ${format(-p.z)}) м.`;
+      const p = beaconToCameraFrame(candidate.position);
+      return `${result.accepted.length > 1 ? "Вариант "+(i+1)+":\n" : ""}Камера относительно P1:\nX=${format(p.x)}, Y=${format(p.y)}, Z=${format(p.z)} м\n\nДо маяков P1 / P2 / P3:\n${candidate.ranges.map(format).join(" / ")} м\n\nВектор от камеры к P1:\n(${format(-p.x)}, ${format(-p.y)}, ${format(-p.z)}) м`;
     });
     el("result").textContent = (result.accepted.length > 1 ? "Позиция неоднозначна: несколько вариантов подходят по высоте.\n" : "")+lines.join("\n\n");
   } catch (error) {
@@ -263,17 +284,21 @@ el("demoBtn").addEventListener("click",() => {
     const world = worldTriangle(), position = hintPosition();
     if (![position.x,position.y,position.z].every(Number.isFinite) || position.z <= 0) throw new Error("Высота тестовой камеры должна быть положительной.");
     const image = document.createElement("canvas"); image.width = 1920; image.height = 1080;
-    const points = projectCentered(world,position,value("focal"),{x:960,y:540},value("phantomRot"));
+    const focal=state.focalSource==="mm" ? value("focalEq")/value("sensorW")*image.width : value("focal");
+    if (!Number.isFinite(focal) || focal <= 0) throw new Error("Введите положительные параметры камеры.");
+    const points = projectCentered(world,position,focal,{x:960,y:540},value("phantomRot"));
     if (points.some(p => !p || p.x < 0 || p.x >= image.width || p.y < 0 || p.y >= image.height))
       throw new Error("Маяки не помещаются в тестовый кадр. Измените позицию или фокус.");
     const paint = image.getContext("2d");
     paint.fillStyle = "#0b1220"; paint.fillRect(0,0,image.width,image.height);
     paint.fillStyle = "#b6c4de"; paint.font = "24px sans-serif";
-    paint.fillText(`Тест: камера (${position.x}, ${position.y}, ${position.z}) м; f=${value("focal")} px`,30,40);
+    const displayPosition=beaconToCameraFrame(position);
+    paint.fillText(`Тест: камера (${displayPosition.x}, ${displayPosition.y}, ${displayPosition.z}) м; f=${focal.toFixed(2)} px`,30,40);
     points.forEach((p,i) => { paint.fillStyle = colors[i]; paint.beginPath(); paint.arc(p.x,p.y,5,0,2*Math.PI); paint.fill(); });
+    el("focal").value=focal.toFixed(3);
     loadImage(image,{useSaved:false});
     state.points = points.map(p => ({x:addNoise(p.x),y:addNoise(p.y)}));
-    el("height").value = position.z;
+    el("height").value = String(position.z);
     renderPoints(); calculate();
   } catch (error) { el("result").textContent = error.message; }
 });

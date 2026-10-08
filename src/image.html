@@ -3,121 +3,132 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Оценка расстояния по фото</title>
+  <title>Позиция камеры по фото</title>
   <link rel="stylesheet" href="../styles/styles.css" />
 </head>
-<body class="image-page">
-  <div class="panel">
-    <div class="title">Расстояние по фото (3 маркера)</div>
-    <div class="row">
-      <label class="label">Изображение</label>
+<body class="image-page photo-workspace">
+  <aside class="panel" aria-label="Расчёт позиции камеры">
+    <header class="photo-header">
+      <div class="title">Позиция по фото</div>
+      <div class="hint">Три маяка → координаты камеры</div>
+      <nav class="photo-nav" aria-label="Страницы проекта">
+        <a class="back" href="./index.html">3D сцена</a>
+        <a class="back" href="./calibration.html">Калибровка</a>
+      </nav>
+    </header>
+
+    <section class="photo-section" aria-labelledby="uploadHeading">
+      <h2 id="uploadHeading"><span class="step-number">1</span> Изображение</h2>
+      <label class="label" for="fileInput">Выберите исходный кадр без обрезки</label>
       <input id="fileInput" type="file" accept="image/*" />
       <div id="imageInfo" class="hint"></div>
-    </div>
-    <div class="row">
-      <label class="label">Дистанции между маркерами (м)</label>
-      <div class="grid">
-        <label>P1–P2 <input id="d12" type="number" step="0.01" value="20" /></label>
-        <label>P1–P3 <input id="d13" type="number" step="0.01" value="53.85" /></label>
-        <label>P2–P3 <input id="d23" type="number" step="0.01" value="50" /></label>
-      </div>
-    </div>
-    <div class="row">
-      <label class="label">Калибровка (фокус, px)</label>
-      <input id="focal" type="number" min="1" step="0.1" value="2140" />
-      <div class="hint">Фокус в пикселях исходного изображения. Оптический центр — центр кадра; изображение без дисторсии.</div>
-      <div class="btns"><a class="back" href="./calibration.html">Калибровка по известным XYZ →</a></div>
-      <button id="applySavedCalibration">Применить сохранённую</button>
-      <div id="calibrationStatus" class="hint"></div>
-    </div>
-    <div class="row">
-      <label class="label">Высота над плоскостью маяков</label>
-      <div class="grid">
-        <label>Высота, м <input id="height" type="number" min="0.1" step="0.1" value="50" /></label>
-        <label>Погрешность ±м <input id="heightTolerance" type="number" min="0" step="0.1" value="2" /></label>
-      </div>
-      <div class="hint">Углы камеры неизвестны. Высота отбирает подходящие решения, но не заменяет измерения по фото.</div>
-    </div>
-    <div class="row">
-      <label class="label">Позиция для фантомов и тестового кадра</label>
-      <div class="grid">
-        <label>X <input id="hintX" type="number" step="1" value="0" /></label>
-        <label>Y <input id="hintY" type="number" step="1" value="-200" /></label>
-        <label>Z <input id="hintZ" type="number" min="0.1" step="1" value="50" /></label>
-      </div>
-      <div class="hint">P1 = (0, 0, 0). +X: от P1 к P2. +Y: перпендикулярно X по земле в сторону P3. +Z: вверх. Эта позиция не используется при расчёте по фото.</div>
-      <div class="hint">Вид перед маяками: голубой слева, розовый за жёлтым. X = 0, Y = −200, Z = 50 — камера в 200 м перед жёлтым на высоте 50 м.</div>
-      <button id="demoBtn">Создать тестовый кадр</button>
-    </div>
-    <div class="row">
-      <div class="hint">Жёлтый маяк должен быть в центре исходного кадра. Для расчёта используются реальные координаты всех трёх кликов; программное смещение картинки не меняет калибровку.</div>
-    </div>
-    <div class="row">
-      <label class="label">Фантомные точки</label>
-      <label><input id="showPhantom" type="checkbox" checked /> Показать ожидаемые точки</label>
-      <div class="hint">Камера смотрит на P1. Фантомы — только визуальная проверка, их смещения не влияют на расчёт.</div>
-      <div class="grid" style="margin-top:6px;">
-        <label>φ° <input id="phantomRot" type="number" step="1" value="0" /></label>
-        <label>ΔX (px) <input id="phantomDX" type="number" step="1" value="0" /></label>
-        <label>ΔY (px) <input id="phantomDY" type="number" step="1" value="0" /></label>
-      </div>
-      <label style="display:block; margin-top:6px;">
-        <input id="lockP1" type="checkbox" checked /> Зафиксировать фантомный P1 на клике
-      </label>
-      <div class="hint">Поворот φ — в кадре вокруг P1 (желтой). Смещения ΔX/ΔY — в пикселях.</div>
-    </div>
-    <div class="row">
-      <label class="label">Перевод фокуса из мм</label>
-      <div class="grid">
-        <label>Фокус, мм <input id="focalEq" type="number" step="0.1" value="36" /></label>
-        <label>сенсор W <input id="sensorW" type="number" step="0.1" value="36" /></label>
-        <label>px = <span id="focalEqPx">—</span></label>
-      </div>
-      <div class="btns">
-        <button id="applyFocalEq">Применить</button>
-      </div>
-      <div class="hint">f(px) = f(мм) / ширина сенсора(мм) × ширина кадра(px). Для эквивалентного фокуса используйте эквивалентную ширину сенсора.</div>
-    </div>
-    <div class="row">
-      <label class="label">Шум клика (px)</label>
-      <input id="clickNoise" type="range" min="0" max="5" step="0.1" value="0" />
-      <div class="hint">σ = <span id="clickNoiseVal">0</span> px</div>
-    </div>
-    <div class="row">
-      <label class="label">Точки на фото</label>
-      <button id="findMarkers">Найти маяки автоматически</button>
-      <div id="detectionStatus" class="hint" aria-live="polite"></div>
-      <div class="hint">Автопоиск: жёлтый P1, синий P2, розово-фиолетовый P3 на сером фоне. Или кликни по центрам маркеров вручную.</div>
-      <div class="hint">Зум: колесо. Панорама: ПКМ или Shift+drag.</div>
-      <div class="hint">Alt + колесо — размер кольца прицела. Совместите его с краем круглого маяка; пустой центр не закрывает точку выбора.</div>
-      <div class="btns">
-        <button id="clearPoints">Сбросить точки</button>
-        <button id="solveBtn">Рассчитать</button>
-      </div>
-    </div>
-    <div class="row">
-      <label class="label">Результат</label>
-      <div class="result" id="result">—</div>
-    </div>
-    <div class="row">
-      <label class="label">Проверка исходных данных</label>
-      <div class="result" id="reproj">—</div>
-    </div>
-    <div class="row">
-      <a class="back" href="./index.html">← Назад к 3D сцене</a>
-    </div>
-  </div>
+    </section>
 
-  <div class="canvas-wrap">
+    <section class="photo-section" aria-labelledby="cameraHeading">
+      <h2 id="cameraHeading"><span class="step-number">2</span> Камера и высота</h2>
+      <div class="grid grid-two">
+        <label>Фокус, мм <input id="focalEq" type="number" min="0.1" step="0.1" value="50" /></label>
+        <label>Ширина матрицы, мм <input id="sensorW" type="number" min="0.1" step="0.1" value="23.4" /></label>
+      </div>
+      <div class="focal-preview hint">Для этого кадра: <span id="focalEqPx">—</span> px</div>
+      <div class="btns"><button id="applyFocalEq">Использовать фокус из мм</button></div>
+      <div id="calibrationStatus" class="hint" aria-live="polite"></div>
+      <div class="grid grid-two height-fields">
+        <label>Высота, м (обязательно) <input id="height" type="number" min="0.1" step="0.1" required placeholder="Введите высоту" /></label>
+        <label>Погрешность, ±м <input id="heightTolerance" type="number" min="0" step="0.1" value="2" /></label>
+      </div>
+      <div class="hint">Высота над плоскостью маяков помогает выбрать правильное решение.</div>
+      <details class="photo-details">
+        <summary>Фокус в пикселях и калибровка</summary>
+        <div class="details-body">
+          <label class="label" for="focal">Фокус, px — ручной ввод</label>
+          <input id="focal" type="number" min="1" step="0.1" value="2140" />
+          <div class="hint">Ручной ввод или сохранённая калибровка заменяют фокус из мм. Для возврата нажмите кнопку выше.</div>
+          <button id="applySavedCalibration">Применить сохранённую калибровку</button>
+          <a class="back" href="./calibration.html">Определить фокус по известной позиции →</a>
+        </div>
+      </details>
+      <details class="photo-details">
+        <summary>Расстояния между маяками</summary>
+        <div class="details-body">
+          <div class="grid">
+            <label>P1–P2, м <input id="d12" type="number" min="0.01" step="0.01" value="20" /></label>
+            <label>P1–P3, м <input id="d13" type="number" min="0.01" step="0.01" value="53.85" /></label>
+            <label>P2–P3, м <input id="d23" type="number" min="0.01" step="0.01" value="50" /></label>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="photo-section" aria-labelledby="markersHeading">
+      <h2 id="markersHeading"><span class="step-number">3</span> Маяки</h2>
+      <div class="marker-legend" aria-label="Порядок выбора маяков">
+        <span class="marker-yellow">P1 жёлтый</span>
+        <span class="marker-blue">P2 синий</span>
+        <span class="marker-pink">P3 розовый</span>
+      </div>
+      <div class="hint marker-required">Перед расчётом нужно выбрать все три маяка.</div>
+      <button id="findMarkers" class="wide-button primary-button" disabled>Найти маяки автоматически</button>
+      <div id="markerProgress" class="hint" aria-live="polite">Сначала загрузите фото.</div>
+      <div id="detectionStatus" class="hint" aria-live="polite"></div>
+      <div class="hint">Или выберите их центры на фото в порядке P1 → P2 → P3.</div>
+      <div class="btns calculation-actions">
+        <button id="solveBtn" class="primary-button" disabled>Рассчитать позицию</button>
+        <button id="clearPoints">Сбросить точки</button>
+      </div>
+    </section>
+
+    <section class="photo-section result-section" aria-labelledby="resultHeading">
+      <h2 id="resultHeading">Результат</h2>
+      <div class="result" id="result" role="status" aria-live="polite">Загрузите фото, найдите маяки и нажмите «Рассчитать позицию».</div>
+      <div class="hint axis-guide">От жёлтого P1: +X от синего P2 к P1 (вправо); +Y по земле в сторону розового P3; +Z вверх.</div>
+      <details class="photo-details">
+        <summary>Проверка решения</summary>
+        <div class="details-body"><div class="result" id="reproj">—</div></div>
+      </details>
+    </section>
+
+    <details class="photo-details test-tools">
+      <summary>Тестовый кадр и фантомные точки</summary>
+      <div class="details-body">
+        <div class="hint">Только для проверки. Эти настройки не меняют расчёт позиции по фото.</div>
+        <div class="grid">
+          <label>X, м <input id="hintX" type="number" step="1" value="0" /></label>
+          <label>Y, м <input id="hintY" type="number" step="1" value="-200" /></label>
+          <label>Z, м <input id="hintZ" type="number" min="0.1" step="1" value="50" /></label>
+        </div>
+        <button id="demoBtn">Создать тестовый кадр</button>
+        <label><input id="showPhantom" type="checkbox" /> Показать фантомные точки</label>
+        <div class="hint">Фантомная камера смотрит на P1. Это визуальный ориентир, а не измерение.</div>
+        <div class="grid">
+          <label>Поворот, ° <input id="phantomRot" type="number" step="1" value="0" /></label>
+          <label>Сдвиг X, px <input id="phantomDX" type="number" step="1" value="0" /></label>
+          <label>Сдвиг Y, px <input id="phantomDY" type="number" step="1" value="0" /></label>
+        </div>
+        <label><input id="lockP1" type="checkbox" checked /> Совмещать фантомный P1 с выбранной точкой</label>
+        <label class="label" for="clickNoise">Шум ручного выбора: <span id="clickNoiseVal">0</span> px</label>
+        <input id="clickNoise" type="range" min="0" max="5" step="0.1" value="0" />
+      </div>
+    </details>
+    <details class="photo-details">
+      <summary>Управление и условия расчёта</summary>
+      <div class="details-body hint">
+        <div>Колесо — зум. ПКМ или Shift + перетаскивание — перемещение фото.</div>
+        <div>Alt + колесо — диаметр прицела. Совместите кольцо с краем круглого маяка.</div>
+        <div>Жёлтый маяк может быть в любой части кадра. Углы камеры вводить не нужно.</div>
+        <div>Используйте изображение без обрезки и дисторсии, с оптическим центром в центре кадра.</div>
+      </div>
+    </details>
+  </aside>
+
+  <main class="canvas-wrap" aria-label="Изображение с маяками">
     <canvas id="imgCanvas"></canvas>
-    <div class="overlay" id="overlayHint">Загрузи изображение и кликни по трем маркерам</div>
+    <div class="overlay" id="overlayHint">Загрузите фото, чтобы выбрать маяки</div>
     <div id="cursorCross">
-      <span class="h"></span>
-      <span class="v"></span>
+      <span class="h"></span><span class="v"></span>
       <span class="label" id="cursorLabel">P1</span>
     </div>
-  </div>
-
+  </main>
   <script type="module" src="./image.js"></script>
 </body>
 </html>

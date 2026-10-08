@@ -6,6 +6,10 @@ const unit = a => a.map(v => v / norm(a));
 const sub = (a, b) => a.map((v, i) => v - b[i]);
 const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
 
+// Public camera coordinates use +X away from P2; the solver keeps +X toward P2.
+export const cameraToBeaconFrame = p => ({x:-p.x,y:p.y,z:p.z});
+export const beaconToCameraFrame = p => ({x:-p.x,y:p.y,z:p.z});
+
 export function buildTriangle(d12, d13, d23) {
   const sides = [d12, d13, d23];
   if (!sides.every(v => Number.isFinite(v) && v > 0) ||

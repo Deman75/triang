@@ -1,4 +1,4 @@
-import { buildTriangle, calibrateFocal, projectCentered, solvePosition } from "./geometry.js";
+import { buildTriangle, calibrateFocal, projectCentered, solvePosition, cameraToBeaconFrame, beaconToCameraFrame } from "./geometry.js";
 import { createImagePicker } from "./image-picker.js";
 import { saveCalibration } from "./calibration-profile.js";
 import { detectMarkers } from "./marker-detection.js";
@@ -6,7 +6,7 @@ import { detectMarkers } from "./marker-detection.js";
 const el = id => document.getElementById(id);
 const value = id => el(id).value.trim() === "" ? NaN : Number(el(id).value);
 const sides = () => [value("d12"),value("d13"),value("d23")];
-const position = () => ({x:value("cameraX"),y:value("cameraY"),z:value("cameraZ")});
+const position = () => cameraToBeaconFrame({x:value("cameraX"),y:value("cameraY"),z:value("cameraZ")});
 let calibration = null;
 let testActive = false;
 function invalidate() {
@@ -46,8 +46,8 @@ function checkReference() {
       center:{x:image.width/2,y:image.height/2},height:C.z,heightTolerance:2});
     if (!result.candidates.length) throw new Error("При контрольном фокусе допустимых позиций не найдено. Проверьте точки и геометрию маяков.");
     const candidates=result.candidates.map(c=>({...c,difference:Math.hypot(c.position.x-C.x,c.position.y-C.y,c.position.z-C.z)})).sort((a,b)=>a.difference-b.difference);
-    const nearest=candidates[0],p=nearest.position;
-    el("referenceResult").textContent=`При f=${focal.toFixed(2)} px ближайшая к введённым XYZ позиция по фото:\nX=${p.x.toFixed(2)}, Y=${p.y.toFixed(2)}, Z=${p.z.toFixed(2)} м.\nРазница с введёнными XYZ: ΔX=${(p.x-C.x).toFixed(2)}, ΔY=${(p.y-C.y).toFixed(2)}, ΔZ=${(p.z-C.z).toFixed(2)} м; всего ${nearest.difference.toFixed(2)} м.\n`+
+    const nearest=candidates[0],p=beaconToCameraFrame(nearest.position),displayC=beaconToCameraFrame(C);
+    el("referenceResult").textContent=`При f=${focal.toFixed(2)} px ближайшая к введённым XYZ позиция по фото:\nX=${p.x.toFixed(2)}, Y=${p.y.toFixed(2)}, Z=${p.z.toFixed(2)} м.\nРазница с введёнными XYZ: ΔX=${(p.x-displayC.x).toFixed(2)}, ΔY=${(p.y-displayC.y).toFixed(2)}, ΔZ=${(p.z-displayC.z).toFixed(2)} м; всего ${nearest.difference.toFixed(2)} м.\n`+
       (nearest.difference>2 ? "Позиция по фото отличается от введённой. Проверьте координаты относительно P1 и направления осей. Для калибровки используются именно введённые XYZ." : "Позиции близки. Если калибровка всё ещё заметно расходится с контрольным фокусом, нужен исходный кадр и точные XYZ для проверки.")+
       `\nВариантов по фото: ${candidates.length}; в диапазоне высоты ±2 м: ${result.accepted.length}.`;
   } catch(error) {el("referenceResult").textContent=error.message;}
@@ -137,7 +137,8 @@ el("generateDemoBtn").addEventListener("click",() => {
     const image = document.createElement("canvas"); image.width=1920; image.height=1080;
     const ctx = image.getContext("2d"); ctx.fillStyle="#0b1220"; ctx.fillRect(0,0,1920,1080);
     ctx.fillStyle="#b6c4de"; ctx.font="24px sans-serif";
-    ctx.fillText(`Тест калибровки: f=${focal} px, камера (${C.x}, ${C.y}, ${C.z}) м`,30,40);
+    const displayC=beaconToCameraFrame(C);
+    ctx.fillText(`Тест калибровки: f=${focal} px, камера (${displayC.x}, ${displayC.y}, ${displayC.z}) м`,30,40);
     points.forEach((p,i) => {ctx.fillStyle=["#ffcc00","#4f8cff","#d46bd5"][i];ctx.beginPath();ctx.arc(p.x,p.y,5,0,2*Math.PI);ctx.fill();});
     loaded(image); picker.setPoints(points); calculate();
   } catch(error) {el("result").textContent=error.message;}

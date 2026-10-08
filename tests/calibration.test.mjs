@@ -97,11 +97,13 @@ test('calibration page calculates and saves its test frame',()=>{
       setTestPoints(next){testPoints=next;onTestMove({x:0,y:0});},resetTestOffset(){onTestMove({x:0,y:0});}}),
     saveCalibration:profile=>{saved=profile;},URL,Image:class{},console
   });
+  elements.get('cameraX').value='30';
   elements.get('generateDemoBtn').handlers.click();
   assert.match(elements.get('result').textContent,/2140\.00 px/);
   assert.equal(elements.get('saveBtn').disabled,false);
   elements.get('referencePx').value='2140';elements.get('checkReference').handlers.click();
   assert.match(elements.get('referenceResult').textContent,/всего 0\.00 м/);
+  assert.match(elements.get('referenceResult').textContent,/X=30\.00/);
   elements.get('saveBtn').handlers.click();
   assert.ok(Math.abs(saved.focal-2140)<1e-7);assert.equal(saved.width,1920);
   const correctPoints=points.map(p=>({...p}));

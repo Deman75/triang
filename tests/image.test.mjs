@@ -15,6 +15,13 @@ test('photo page controls generate and solve a test frame without missing DOM el
   }
   const elements = new Map([...html.matchAll(/id="([^"]+)"/g)].map(m => [m[1],element()]));
   for (const match of html.matchAll(/<input[^>]*id="([^"]+)"[^>]*value="([^"]+)"/g)) elements.get(match[1]).value=match[2];
+  for (const match of html.matchAll(/<input[^>]*id="([^"]+)"[^>]*type="checkbox"[^>]*>/g))
+    elements.get(match[1]).checked=/\bchecked\b/.test(match[0]);
+  assert.equal(elements.get('focalEq').value,'50');
+  assert.equal(elements.get('sensorW').value,'23.4');
+  assert.equal(elements.get('showPhantom').checked,false);
+  assert.equal(elements.get('height').value,'');
+  assert.match(html, /id="height"[^>]*\brequired\b/);
   const document = {
     getElementById:id=>elements.get(id) || null,
     querySelector:()=>element(),createElement:()=>element()
@@ -29,7 +36,20 @@ test('photo page controls generate and solve a test frame without missing DOM el
   }
   let detection={ok:true,points:[{x:960,y:540},{x:752,y:540},{x:752,y:440}],message:'Found'};
   vm.runInNewContext(source,{...geometry,...profiles,detectMarkers:()=>detection,readCalibration:()=>savedProfile,document,window:{addEventListener(){}},console,URL:{createObjectURL:()=> 'mock:image',revokeObjectURL(){}},Math,Number,Image:LoadedImage});
+  const load = () => elements.get('fileInput').handlers.change({target:{files:[{}]}});
+  assert.equal(elements.get('findMarkers').disabled,true);
+  assert.equal(elements.get('solveBtn').disabled,true);
+  load();
+  assert.equal(elements.get('findMarkers').disabled,false);
+  assert.equal(elements.get('solveBtn').disabled,true);
+  assert.ok(Math.abs(Number(elements.get('focal').value)-50/23.4*1501)<0.001);
+  elements.get('focalEq').value='40';
+  elements.get('focalEq').handlers.input();
+  assert.ok(Math.abs(Number(elements.get('focal').value)-40/23.4*1501)<0.001);
+  elements.get('focalEq').value='50';
+  elements.get('focalEq').handlers.input();
   elements.get('demoBtn').handlers.click();
+  assert.equal(elements.get('solveBtn').disabled,false);
   const result = elements.get('result').textContent;
   assert.match(result,/X=0\.00, Y=-200\.00, Z=50\.00/);
   assert.match(elements.get('reproj').textContent,/в диапазоне высоты: 1/);
@@ -40,13 +60,20 @@ test('photo page controls generate and solve a test frame without missing DOM el
   elements.get('applySavedCalibration').handlers.click();
   assert.equal(elements.get('focal').value,'2100.000');
   assert.match(elements.get('calibrationStatus').textContent,/Фокус не применён/);
+  for (const height of ['', '0', '-10', 'NaN']) {
+    elements.get('height').value=height;
+    elements.get('solveBtn').handlers.click();
+    assert.match(elements.get('result').textContent,/Введите высоту/);
+  }
   elements.get('height').value='500';
   elements.get('solveBtn').handlers.click();
   assert.match(elements.get('result').textContent,/Ни одно решение/);
   elements.get('clearPoints').handlers.click();
+  assert.equal(elements.get('solveBtn').disabled,true);
   elements.get('solveBtn').handlers.click();
   assert.match(elements.get('result').textContent,/выберите P1, P2, P3/);
   elements.get('findMarkers').handlers.click();
+  assert.equal(elements.get('solveBtn').disabled,false);
   assert.equal(elements.get('detectionStatus').textContent,'Found');
   elements.get('solveBtn').handlers.click();
   assert.doesNotMatch(elements.get('result').textContent,/выберите P1, P2, P3/);
@@ -58,7 +85,6 @@ test('photo page controls generate and solve a test frame without missing DOM el
   elements.get('focalEq').value='50';
   elements.get('sensorW').value='23.4';
   elements.get('applyFocalEq').handlers.click();
-  const load = () => elements.get('fileInput').handlers.change({target:{files:[{}]}});
   load();
   assert.ok(Math.abs(Number(elements.get('focal').value)-50/23.4*1501)<0.001);
   assert.match(elements.get('imageInfo').textContent,/1501.*840/);
@@ -70,4 +96,10 @@ test('photo page controls generate and solve a test frame without missing DOM el
   loadedWidth=1501; loadedHeight=840;
   load();
   assert.equal(elements.get('focal').value,'1234');
+  elements.get('hintX').value='150';
+  elements.get('hintY').value='-300';
+  elements.get('hintZ').value='70';
+  elements.get('demoBtn').handlers.click();
+  assert.match(elements.get('result').textContent,/X=150\.00, Y=-300\.00, Z=70\.00/);
+  assert.match(elements.get('result').textContent,/\(-150\.00, 300\.00, -70\.00\)/);
 });
