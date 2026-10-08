@@ -102,4 +102,7 @@ test('photo page controls generate and solve a test frame without missing DOM el
   elements.get('demoBtn').handlers.click();
   assert.match(elements.get('result').textContent,/X=150\.00, Y=-300\.00, Z=70\.00/);
   assert.match(elements.get('result').textContent,/\(-150\.00, 300\.00, -70\.00\)/);
+  assert.match(elements.get('result').textContent,/Угол по горизонту: 333\.43°/);
+  assert.match(elements.get('result').textContent,/Наклон вниз от горизонта: 11\.79°/);
+  assert.match(elements.get('result').textContent,/P1 от оптической оси камеры: 0\.00°/);
 });

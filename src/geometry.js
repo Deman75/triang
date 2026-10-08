@@ -10,6 +10,16 @@ const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1
 export const cameraToBeaconFrame = p => ({x:-p.x,y:p.y,z:p.z});
 export const beaconToCameraFrame = p => ({x:-p.x,y:p.y,z:p.z});
 
+export function directionToP1(position) {
+  const horizontal=Math.hypot(position.x,position.y);
+  const degrees=180/Math.PI;
+  return {
+    // Directly above P1 there is no unique horizontal bearing.
+    bearing:horizontal < 1e-8 ? null : (Math.atan2(-position.x,-position.y)*degrees+360)%360,
+    pitchDown:Math.atan2(position.z,horizontal)*degrees
+  };
+}
+
 export function buildTriangle(d12, d13, d23) {
   const sides = [d12, d13, d23];
   if (!sides.every(v => Number.isFinite(v) && v > 0) ||

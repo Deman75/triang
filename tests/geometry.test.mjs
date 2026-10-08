@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTriangle, solvePosition, projectCentered } from '../src/geometry.js';
+import { buildTriangle, solvePosition, projectCentered, directionToP1 } from '../src/geometry.js';
+
+test('direction to yellow beacon uses public axes and handles a vertical view', () => {
+  const front=directionToP1({x:0,y:-200,z:50});
+  assert.equal(front.bearing,0);
+  assert.ok(Math.abs(front.pitchDown-14.0362434679)<1e-8);
+  assert.equal(directionToP1({x:-100,y:0,z:50}).bearing,90);
+  assert.equal(directionToP1({x:100,y:0,z:50}).bearing,270);
+  assert.deepEqual(directionToP1({x:0,y:0,z:50}),{bearing:null,pitchDown:90});
+});
 
 const world = buildTriangle(20, Math.hypot(20, 50), 50);
 const center = {x:960,y:540};

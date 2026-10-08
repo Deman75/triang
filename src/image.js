@@ -1,4 +1,4 @@
-import { buildTriangle, solvePosition, projectCentered, cameraToBeaconFrame, beaconToCameraFrame } from "./geometry.js";
+import { buildTriangle, solvePosition, projectCentered, cameraToBeaconFrame, beaconToCameraFrame, directionToP1 } from "./geometry.js";
 import { readCalibration, calibrationMatches } from "./calibration-profile.js";
 import { detectMarkers } from "./marker-detection.js";
 
@@ -268,9 +268,12 @@ function calculate() {
       return;
     }
     const format = n => (Math.abs(n) < 0.005 ? 0 : n).toFixed(2);
+    const offAxis=Math.atan2(p1Offset,value("focal"))*180/Math.PI;
     const lines = result.accepted.map((candidate,i) => {
       const p = beaconToCameraFrame(candidate.position);
-      return `${result.accepted.length > 1 ? "Вариант "+(i+1)+":\n" : ""}Камера относительно P1:\nX=${format(p.x)}, Y=${format(p.y)}, Z=${format(p.z)} м\n\nДо маяков P1 / P2 / P3:\n${candidate.ranges.map(format).join(" / ")} м\n\nВектор от камеры к P1:\n(${format(-p.x)}, ${format(-p.y)}, ${format(-p.z)}) м`;
+      const angles=directionToP1(p);
+      const bearing=angles.bearing===null ? "не определён (камера над P1)" : `${format(angles.bearing)}°`;
+      return `${result.accepted.length > 1 ? "Вариант "+(i+1)+":\n" : ""}Камера относительно P1:\nX=${format(p.x)}, Y=${format(p.y)}, Z=${format(p.z)} м\n\nДо маяков P1 / P2 / P3:\n${candidate.ranges.map(format).join(" / ")} м\n\nНаправление от камеры к P1:\nУгол по горизонту: ${bearing}\nНаклон вниз от горизонта: ${format(angles.pitchDown)}°\n(0° = +Y, 90° = +X)\n\nP1 от оптической оси камеры: ${format(offAxis)}°\n\nВектор от камеры к P1:\n(${format(-p.x)}, ${format(-p.y)}, ${format(-p.z)}) м`;
     });
     el("result").textContent = (result.accepted.length > 1 ? "Позиция неоднозначна: несколько вариантов подходят по высоте.\n" : "")+lines.join("\n\n");
   } catch (error) {
